@@ -7,7 +7,7 @@
  * START BUILD GAME - This is the function that runs build game
  *
  */
-function initMain() {
+async function initMain() {
 	buildGameButton();
 	if (typeof buildScoreBoardCanvas == 'function') {
 		buildScoreBoardCanvas();
@@ -28,23 +28,42 @@ function initMain() {
 			// store the token in local storage
 			$('#buttonStart').hide();
 			//check the game status
-			axios.get("/questions", {
-			}).then(response => {
-				let questions = response.data.data;
-				if (questions.length == 0) {
-					goPage('main');
-					$('.preloadText').html('لا يوجد الاسئلة, الرجاء المحاولة مرة اخرى');
-				} else {
-					loadXML(questions);
-				}
-			})
-				.catch(error => {
-					if (error.response.status == 401) {
-						goPage('main');
-						$('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
-					}
-					console.log(error);
-				})
+            await axios.post("/check-game", {
+            }).then(response =>{
+                if(response.data.success == true){
+                    axios.get("/questions", {
+                    }).then(response => {
+                        let questions = response.data.data;
+                        if (questions.length == 0) {
+                            goPage('main');
+                            $('.preloadText').html('لا يوجد الاسئلة, الرجاء المحاولة مرة اخرى');
+                        } else {
+                            loadXML(questions);
+                        }
+                    })
+                        .catch(error => {
+                            if (error.response.status == 401) {
+                                goPage('main');
+                                $('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
+                            }
+                            console.log(error);
+                        })
+                }else{
+                    goPage('main');
+                    $(this).hide();
+                    $('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
+                    $('.preloadText').show();
+                }
+            })
+            .catch(error => {
+                if(error.response.status == 401){
+                    goPage('main');
+                    $(this).hide();
+                    $('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
+                    $('.preloadText').show();
+                }
+                //console.log(error);
+            })
 		}
 	}
 }

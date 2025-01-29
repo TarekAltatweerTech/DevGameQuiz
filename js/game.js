@@ -30,7 +30,7 @@ var categorySettings = {
 //question settings
 var questionSettings = {
 	totalQuestionLimit: 0, //set more than 0 to limit total questions,
-	randomQuestion: true, //true or false to enable randomize questions
+	randomQuestion: false, //true or false to enable randomize questions
 	revealAnswer: false, //enable reveal answer
 	loader: "انتظر  ...", //loader text display
 	totalText: "[NUMBER]/[TOTAL]", //total question text display,
@@ -190,7 +190,7 @@ var resultSettings = {
 	scoreText: "نقاطك اليوم : [NUMBER]", //score text display
 	timerText: "BEST TIME : [NUMBER]" ,//timer text display
     winText: "مبروك ! لقد حصلت على [NUMBER] coins", //win text display
-    loseText: "! لقد خسرت اليوم بمجموع نقاط [NUMBER] , حظ موفق لك فالايام القادمة", //lose text display
+    loseText: "! لقد خسرت اليوم , حظ موفق لك فالايام القادمة", //lose text display
 };
 
 //Social share, [SCORE] will replace with game score
@@ -246,7 +246,27 @@ function buildGameButton() {
 	$('#buttonStart').click(function () {
 		$(this).addClass('disabledbutton');
 		playSound('soundClick');
-		goPage('game');
+        // check if already game start
+        axios.post("/check-game", {
+		}).then(response =>{
+			if(response.data.success == true){
+				goPage('game');
+			}else{
+				goPage('main');
+                $(this).hide();
+				$('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
+                $('.preloadText').show();
+			}
+		})
+		.catch(error => {
+			if(error.response.status == 401){
+				goPage('main');
+                $(this).hide();
+				$('.preloadText').html('لا يسمح لك الدخول للعبة حاليا');
+                $('.preloadText').show();
+			}
+			//console.log(error);
+		})
 		// if(typeof memberData != 'undefined' && memberSettings.enableMembership){
 		// 	if(checkMemberProceed()){
 		// 		if(memberData.category){
@@ -434,7 +454,7 @@ async function goPage(page) {
                 }).then(response => {
                     //avg_score = response.data.data;
                     // set score
-					count_required_answer = response.data.data 
+					count_required_answer = response.data.data
                     //score = `${playerData.score}/${response.data.points_questions}`;
                     // check if score is greater than avg score
                     if (playerData.count_number_answer >= count_required_answer) {
@@ -443,7 +463,7 @@ async function goPage(page) {
                         $('.itemWinnerCup img').attr('src', url_win + '/assets/winner.svg');
                     }else{
 						coins_final = 0;
-                        $('#statusScore').html(resultSettings.loseText.replace('[NUMBER]', coins_final));
+                        $('#statusScore').html(resultSettings.loseText);
                         $('.itemWinnerCup img').attr('src', url_win + '/assets/looser.svg');
                     }
                     //score_final = playerData.score >= avg_score ? playerData.score : 0;
@@ -456,7 +476,7 @@ async function goPage(page) {
 
                 // submit score to server
                 await axios.post("/end",{
-					total_coins: coins_final,
+					coins: coins_final,
                     //status_win: status_win
 				}).then(function (response) {
 					// delete the token
@@ -865,8 +885,9 @@ function loadQuestion() {
      // جلب الوقت المخصص لكل سؤال من قاعدة البيانات
      var currentQuestion = gameData.targetArray[gameData.sequenceNum];
 
-     var delay = currentQuestion.delay || 30000;  // إذا لم يوجد، اضبطه على 30 ثانية افتراضيًا
-
+     var delay = currentQuestion.delay || 30000;
+	 //var questionCoins = currentQuestion.coins || 0;
+	 //console.log(questionCoins);
      // تفعيل المؤقت بناءً على `timeLimit` لكل سؤال
      startTimerForQuestion(delay);
 
@@ -2327,8 +2348,11 @@ function displayQuestionResult() {
 	if (questionSettings.showCorrectWrong) {
 		if (playerData.answerCorrectStatus) {
 			playSound('soundAnswerCorrect');
+            let currentQuestion = gameData.targetArray[gameData.sequenceNum];
+            //console.log(currentQuestion);
+            let questionCoins = currentQuestion.coins
 			// this_is_point
-			playerData.score+=20;
+			playerData.score+=questionCoins;
 			playerData.count_number_answer++;
             clearInterval(countdown);
             timerSettings.time = 0;
